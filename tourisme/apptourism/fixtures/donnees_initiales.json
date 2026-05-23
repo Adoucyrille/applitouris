@@ -1,0 +1,19 @@
+[
+    { "model": "apptourism.region", "pk": 1, "fields": { "nom": "Abidjan", "description": "Capitale économique de la Côte d'Ivoire" } },
+    { "model": "apptourism.region", "pk": 2, "fields": { "nom": "Yamoussoukro", "description": "Capitale politique de la Côte d'Ivoire" } },
+    { "model": "apptourism.region", "pk": 3, "fields": { "nom": "Bouaké", "description": "Deuxième ville du pays, au centre du pays" } },
+    { "model": "apptourism.region", "pk": 4, "fields": { "nom": "San-Pédro", "description": "Ville portuaire du sud-ouest" } },
+    { "model": "apptourism.region", "pk": 5, "fields": { "nom": "Man", "description": "Ville des montagnes à l'ouest" } },
+    { "model": "apptourism.region", "pk": 6, "fields": { "nom": "Korhogo", "description": "Capitale du nord, connue pour l'artisanat" } },
+    { "model": "apptourism.region", "pk": 7, "fields": { "nom": "Grand-Bassam", "description": "Première capitale coloniale, patrimoine UNESCO" } },
+    { "model": "apptourism.region", "pk": 8, "fields": { "nom": "Assinie", "description": "Station balnéaire prisée du sud-est" } },
+
+    { "model": "apptourism.categorie", "pk": 1, "fields": { "nom": "Plage", "icone": "beach_access" } },
+    { "model": "apptourism.categorie", "pk": 2, "fields": { "nom": "Monument historique", "icone": "account_balance" } },
+    { "model": "apptourism.categorie", "pk": 3, "fields": { "nom": "Parc naturel", "icone": "park" } },
+    { "model": "apptourism.categorie", "pk": 4, "fields": { "nom": "Musée", "icone": "museum" } },
+    { "model": "apptourism.categorie", "pk": 5, "fields": { "nom": "Site religieux", "icone": "church" } },
+    { "model": "apptourism.categorie", "pk": 6, "fields": { "nom": "Montagne", "icone": "landscape" } },
+    { "model": "apptourism.categorie", "pk": 7, "fields": { "nom": "Artisanat", "icone": "handyman" } },
+    { "model": "apptourism.categorie", "pk": 8, "fields": { "nom": "Cascades", "icone": "water" } }
+]
