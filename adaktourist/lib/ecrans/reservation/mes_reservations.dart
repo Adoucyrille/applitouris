@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/reservation.dart';
+import '../paiement/paiement.dart';
 
 class EcranMesReservations extends StatefulWidget {
   const EcranMesReservations({super.key});
@@ -37,6 +38,105 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
         _chargement = false;
       });
     }
+  }
+
+  Future<void> _annulerReservation(Reservation r) async {
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title  : const Text('Annuler la réservation'),
+        content: Text(
+          'Voulez-vous annuler votre réservation pour "${r.site}" ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child    : const Text('Non'),
+          ),
+          ElevatedButton(
+            style    : ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child    : const Text(
+              'Oui, annuler',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirme != true) return;
+
+    try {
+      final resultat = await ApiService.annulerReservation(r.id);
+      if (!mounted) return;
+      if (resultat.containsKey('message')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content         : Text('Réservation annulée avec succès.'),
+            backgroundColor : Colors.green,
+          ),
+        );
+        _chargerReservations();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content         : Text(resultat['erreur'] ?? 'Erreur lors de l\'annulation.'),
+            backgroundColor : Colors.red,
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content         : Text('Impossible de contacter le serveur.'),
+          backgroundColor : Colors.red,
+        ),
+      );
+    }
+  }
+
+  bool _peutAnnuler(Reservation r) {
+    final dateVisite = DateTime.tryParse(r.dateVisite);
+    final createdAt  = DateTime.tryParse(r.createdAt);
+    if (dateVisite == null) return true;
+
+    final maintenant    = DateTime.now();
+    final joursRestants = dateVisite.difference(
+      DateTime(maintenant.year, maintenant.month, maintenant.day),
+    ).inDays;
+
+    if (joursRestants > 1) return true;
+
+    if (createdAt == null) return false;
+    return maintenant.isBefore(createdAt.toLocal().add(const Duration(hours: 2)));
+  }
+
+  String _messageDelai(Reservation r) {
+    final dateVisite = DateTime.tryParse(r.dateVisite);
+    final createdAt  = DateTime.tryParse(r.createdAt);
+    if (dateVisite == null) return '';
+
+    final maintenant    = DateTime.now();
+    final joursRestants = dateVisite.difference(
+      DateTime(maintenant.year, maintenant.month, maintenant.day),
+    ).inDays;
+
+    if (joursRestants > 1) {
+      final veille = dateVisite.subtract(const Duration(days: 1));
+      return 'Annulable jusqu\'au ${veille.day}/${veille.month}/${veille.year}';
+    }
+
+    if (createdAt == null) return 'Annulation sous 2h après réservation';
+    final limite2h = createdAt.toLocal().add(const Duration(hours: 2));
+    if (maintenant.isBefore(limite2h)) {
+      final restant  = limite2h.difference(maintenant);
+      final heures   = restant.inHours;
+      final minutes  = restant.inMinutes % 60;
+      return 'Annulable encore ${heures}h${minutes.toString().padLeft(2, '0')}min';
+    }
+    return 'Annulation impossible (délai dépassé)';
   }
 
   Color _couleurStatut(String statut) {
@@ -133,6 +233,99 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
                             const SizedBox(height: 8),
                             _ligne(Icons.payments, 'Montant',
                               '${r.montantTotal.toStringAsFixed(0)} FCFA'),
+
+                            // Boutons payer + annuler (uniquement si en attente)
+                            if (r.statut == 'en_attente') ...[
+                              const SizedBox(height: 10),
+                              // Message délai d'annulation
+                              Row(
+                                children: [
+                                  Icon(
+                                    _peutAnnuler(r)
+                                      ? Icons.info_outline
+                                      : Icons.lock_clock,
+                                    size : 14,
+                                    color: _peutAnnuler(r)
+                                      ? Colors.blueGrey
+                                      : Colors.red.shade400,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      _messageDelai(r),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color   : _peutAnnuler(r)
+                                          ? Colors.blueGrey
+                                          : Colors.red.shade400,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  // Bouton Payer
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () async {
+                                        await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => EcranPaiement(
+                                              reservationId: r.id,
+                                              montant      : r.montantTotal,
+                                              nomSite      : r.site,
+                                            ),
+                                          ),
+                                        );
+                                        _chargerReservations();
+                                      },
+                                      icon : const Icon(
+                                        Icons.payment,
+                                        color: Colors.white,
+                                        size : 18,
+                                      ),
+                                      label: const Text(
+                                        'Payer',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF009A44),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Bouton Annuler (affiché seulement si délai respecté)
+                                  if (_peutAnnuler(r)) ...[
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => _annulerReservation(r),
+                                        icon : const Icon(
+                                          Icons.cancel_outlined,
+                                          color: Colors.red,
+                                          size : 18,
+                                        ),
+                                        label: const Text(
+                                          'Annuler',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side : const BorderSide(color: Colors.red),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),

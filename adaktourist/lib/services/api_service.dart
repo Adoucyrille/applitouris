@@ -292,6 +292,15 @@ class ApiService {
     return jsonDecode(utf8.decode(reponse.bodyBytes));
   }
 
+  static Future<Map<String, dynamic>> annulerReservation(int reservationId) async {
+    final headers = await headersPrives();
+    final reponse = await http.delete(
+      Uri.parse(ApiConfig.detailReservation(reservationId)),
+      headers: headers,
+    );
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
   static Future<List<dynamic>> getMesReservations() async {
     final headers = await headersPrives();
     final reponse = await http.get(
@@ -331,6 +340,25 @@ class ApiService {
     final reponse = await http.post(
       Uri.parse('${ApiConfig.simulerPaiement}$paiementId/confirmer/'),
       headers: headersPublics,
+    );
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  // ── Administration ────────────────────────────────────
+  static Future<Map<String, dynamic>> getTableauBordAdmin() async {
+    final headers = await headersPrives();
+    final reponse = await http.get(
+      Uri.parse(ApiConfig.tableauBord),
+      headers: headers,
+    );
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  static Future<List<dynamic>> getUtilisateurs() async {
+    final headers = await headersPrives();
+    final reponse = await http.get(
+      Uri.parse(ApiConfig.gestionUtilisateurs),
+      headers: headers,
     );
     return jsonDecode(utf8.decode(reponse.bodyBytes));
   }

@@ -15,10 +15,10 @@ class EstAdmin(BasePermission):
     message = "Accès refusé. Vous devez être administrateur pour effectuer cette action."
 
     def has_permission(self, request, view):
-        # L'utilisateur doit être connecté ET avoir le rôle admin
+        # L'utilisateur doit être connecté ET avoir le rôle admin (ou être superuser Django)
         return (
             request.user.is_authenticated and
-            request.user.role == 'admin'
+            (request.user.role == 'admin' or request.user.is_superuser)
         )
 
 
@@ -70,7 +70,7 @@ class EstProprietaireDuSite(BasePermission):
             return True
 
         #  L'administrateur peut modifier ou supprimer n'importe quel site
-        if request.user.role == 'admin':
+        if request.user.role == 'admin' or request.user.is_superuser:
             return True
 
         #  Le propriétaire ne peut modifier/supprimer QUE ses propres sites

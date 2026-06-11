@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/api_service.dart';
 import '../../models/utilisateur.dart';
 import '../auth/connexion.dart';
+import '../admin/tableau_bord_admin.dart';
 
 class EcranProfil extends StatefulWidget {
   const EcranProfil({super.key});
@@ -276,6 +277,35 @@ class _EcranProfilState extends State<EcranProfil> {
                                : _utilisateur!.telephone,
                   ),
                   const SizedBox(height: 32),
+
+                  // Bouton tableau de bord admin (visible uniquement pour les admins)
+                  if (_utilisateur!.estAdmin) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const EcranTableauBordAdmin(),
+                          ),
+                        ),
+                        icon : const Icon(Icons.admin_panel_settings,
+                          color: Colors.white),
+                        label: const Text(
+                          'Tableau de bord admin',
+                          style: TextStyle(color: Colors.white, fontSize: 15),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B64F1),
+                          padding        : const EdgeInsets.symmetric(vertical: 14),
+                          shape          : RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Bouton déconnexion
                   OutlinedButton.icon(

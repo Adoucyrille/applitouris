@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
-import '../paiement/paiement.dart';
+import 'mes_reservations.dart';
 
 class EcranReservation extends StatefulWidget {
   final Map<String, dynamic> site;
@@ -63,17 +63,20 @@ class _EcranReservationState extends State<EcranReservation> {
       );
 
       if (resultat.containsKey('reservation')) {
-        final reservationId = resultat['reservation']['id'];
         if (mounted) {
-          Navigator.pushReplacement(
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content        : Text('Réservation créée ! Vous pouvez payer depuis "Mes réservations".'),
+              backgroundColor: Color(0xFF009A44),
+              duration       : Duration(seconds: 3),
+            ),
+          );
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (_) => EcranPaiement(
-                reservationId : reservationId,
-                montant       : _montantTotal,
-                nomSite       : widget.site['nom'],
-              ),
+              builder: (_) => const EcranMesReservations(),
             ),
+            (route) => route.isFirst,
           );
         }
       } else {

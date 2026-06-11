@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
+from datetime import date, datetime, timedelta, timezone as dt_timezone
 from .models import (
     Utilisateur, Region, Categorie,
     SiteTouristique, PhotoSite, Avis, Reservation, Paiement
@@ -356,6 +357,23 @@ class VueDetailReservation(APIView):
                 {"erreur": "Seules les réservations en attente peuvent être annulées."},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        aujourd_hui   = date.today()
+        jours_restants = (reservation.date_visite - aujourd_hui).days
+
+        if jours_restants > 1:
+            # Visite dans plus d'un jour → annulation libre
+            pass
+        else:
+            # Visite dans ≤ 1 jour → seulement dans les 2h suivant la réservation
+            maintenant = datetime.now(dt_timezone.utc)
+            limite_2h  = reservation.created_at + timedelta(hours=2)
+            if maintenant > limite_2h:
+                return Response(
+                    {"erreur": "Annulation impossible : la visite est imminente et le délai de 2 heures après réservation est dépassé."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         reservation.statut = 'annulee'
         reservation.save()
         return Response({"message": "Réservation annulée avec succès."})

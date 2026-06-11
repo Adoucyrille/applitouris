@@ -26,6 +26,14 @@ class _EcranPaiementState extends State<EcranPaiement> {
   bool    _chargement       = false;
   String? _erreur;
 
+  final TextEditingController _numeroController = TextEditingController();
+
+  @override
+  void dispose() {
+    _numeroController.dispose();
+    super.dispose();
+  }
+
   final List<Map<String, String>> _moyens = [
     {'id': 'orange_money', 'nom': 'Orange Money'},
     {'id': 'mtn_momo',     'nom': 'MTN MoMo'},
@@ -33,7 +41,53 @@ class _EcranPaiementState extends State<EcranPaiement> {
     {'id': 'moov_money',   'nom': 'Moov Money'},
   ];
 
+  String _hintNumero() {
+    switch (_moyenSelectionne) {
+      case 'orange_money': return 'Ex : 07 00 00 00 00';
+      case 'mtn_momo'    : return 'Ex : 05 00 00 00 00';
+      case 'moov_money'  : return 'Ex : 01 00 00 00 00';
+      case 'wave'        : return 'Ex : 07 00 00 00 00';
+      default            : return 'Numéro de téléphone (10 chiffres)';
+    }
+  }
+
+  static const Map<String, List<String>> _prefixesOperateur = {
+    'orange_money': ['07', '08', '09'],
+    'mtn_momo'    : ['04', '05', '06'],
+    'moov_money'  : ['01', '02', '03'],
+    'wave'        : ['01', '02', '03', '04', '05', '06', '07', '08', '09'],
+  };
+
+  String? _validerNumero(String numero) {
+    final chiffres = numero.replaceAll(RegExp(r'\s'), '');
+    if (chiffres.isEmpty) return 'Veuillez entrer votre numéro de paiement.';
+    if (!RegExp(r'^\d+$').hasMatch(chiffres)) return 'Le numéro ne doit contenir que des chiffres.';
+    if (chiffres.length != 10) return 'Le numéro doit contenir 10 chiffres.';
+
+    final prefixes = _prefixesOperateur[_moyenSelectionne] ?? [];
+    final prefixe  = chiffres.substring(0, 2);
+    if (!prefixes.contains(prefixe)) {
+      final noms = {
+        'orange_money': 'Orange (07, 08, 09)',
+        'mtn_momo'    : 'MTN (05, 06)',
+        'moov_money'  : 'Moov (01, 02)',
+        'wave'        : 'tous opérateurs',
+      };
+      final nomOperateur = noms[_moyenSelectionne] ?? '';
+      final prefixesStr  = prefixes.join(', ');
+      return 'Numéro invalide pour $nomOperateur.\nPréfixes acceptés : $prefixesStr.';
+    }
+    return null;
+  }
+
   Future<void> _payer() async {
+    final numero = _numeroController.text.trim();
+    final erreurNumero = _validerNumero(numero);
+    if (erreurNumero != null) {
+      setState(() => _erreur = erreurNumero);
+      return;
+    }
+
     setState(() {
       _chargement = true;
       _erreur     = null;
@@ -165,32 +219,34 @@ class _EcranPaiementState extends State<EcranPaiement> {
         );
 
       case 'wave':
-        return Container(
-          width : 64, height: 42,
-          decoration: BoxDecoration(
-            color       : const Color(0xFF1B64F1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned(
-                bottom: 4,
-                child: CustomPaint(
-                  size  : const Size(56, 14),
-                  painter: _WavePainter(),
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width : 64, height: 42,
+            color : const Color(0xFF1B64F1),
+            child : Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  bottom: 0,
+                  left  : 0,
+                  right : 0,
+                  child : CustomPaint(
+                    size   : const Size(double.infinity, 14),
+                    painter: _WavePainter(),
+                  ),
                 ),
-              ),
-              const Text(
-                'wave',
-                style: TextStyle(
-                  color     : Colors.white,
-                  fontSize  : 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1,
+                const Text(
+                  'wave',
+                  style: TextStyle(
+                    color        : Colors.white,
+                    fontSize     : 16,
+                    fontWeight   : FontWeight.w800,
+                    letterSpacing: 1,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
 
@@ -283,90 +339,163 @@ class _EcranPaiementState extends State<EcranPaiement> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Paiement')),
-      body  : Padding(
-        padding: const EdgeInsets.all(24),
-        child  : Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body  : Column(
+        children: [
 
-            // Résumé du paiement
-            Card(
-              color : const Color(0xFFF77F00).withValues(alpha: 0.1),
-              child : Padding(
-                padding: const EdgeInsets.all(16),
-                child  : Column(
-                  children: [
-                    const Icon(
-                      Icons.receipt,
-                      size : 48,
-                      color: Color(0xFFF77F00),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.nomSite,
-                      style: const TextStyle(
-                        fontSize   : 18,
-                        fontWeight : FontWeight.bold,
+          // Contenu défilable
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              child  : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+
+                  // Résumé du paiement
+                  Card(
+                    color : const Color(0xFFF77F00).withValues(alpha: 0.1),
+                    child : Padding(
+                      padding: const EdgeInsets.all(16),
+                      child  : Column(
+                        children: [
+                          const Icon(
+                            Icons.receipt,
+                            size : 48,
+                            color: Color(0xFFF77F00),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.nomSite,
+                            style: const TextStyle(
+                              fontSize  : 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${widget.montant.toStringAsFixed(0)} FCFA',
+                            style: const TextStyle(
+                              fontSize  : 32,
+                              fontWeight: FontWeight.bold,
+                              color     : Color(0xFFF77F00),
+                            ),
+                          ),
+                        ],
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${widget.montant.toStringAsFixed(0)} FCFA',
-                      style: const TextStyle(
-                        fontSize   : 32,
-                        fontWeight : FontWeight.bold,
-                        color      : Color(0xFFF77F00),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Titre moyen de paiement
-            const Text(
-              'Choisir un moyen de paiement',
-              style: TextStyle(
-                fontSize   : 16,
-                fontWeight : FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Liste des moyens de paiement
-            ..._moyens.map((moyen) => _cartePaiement(moyen['id']!, moyen['nom']!)),
-
-            const Spacer(),
-
-            // Message d'erreur
-            if (_erreur != null)
-              Container(
-                padding    : const EdgeInsets.all(12),
-                margin     : const EdgeInsets.only(bottom: 16),
-                decoration : BoxDecoration(
-                  color        : Colors.red.shade50,
-                  borderRadius : BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _erreur!,
-                  style: TextStyle(color: Colors.red.shade700),
-                ),
-              ),
-
-            // Bouton payer
-            ElevatedButton(
-              onPressed: _chargement ? null : _payer,
-              child    : _chargement
-                ? const CircularProgressIndicator(color: Colors.white)
-                : Text(
-                    'Payer ${widget.montant.toStringAsFixed(0)} FCFA',
-                    style: const TextStyle(fontSize: 16),
                   ),
+                  const SizedBox(height: 24),
+
+                  // Titre moyen de paiement
+                  const Text(
+                    'Choisir un moyen de paiement',
+                    style: TextStyle(
+                      fontSize  : 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Liste des moyens de paiement
+                  ..._moyens.map((moyen) =>
+                    _cartePaiement(moyen['id']!, moyen['nom']!)),
+
+                  const SizedBox(height: 8),
+
+                  // Champ numéro de paiement
+                  const Text(
+                    'Numéro de paiement',
+                    style: TextStyle(
+                      fontSize  : 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller  : _numeroController,
+                    keyboardType: TextInputType.phone,
+                    maxLength   : 15,
+                    decoration  : InputDecoration(
+                      hintText: _hintNumero(),
+                      prefixIcon   : const Icon(
+                        Icons.phone,
+                        color: Color(0xFFF77F00),
+                      ),
+                      border       : OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide  : const BorderSide(
+                          color: Color(0xFFF77F00),
+                          width: 2,
+                        ),
+                      ),
+                      counterText: '',
+                    ),
+                    onChanged: (_) {
+                      if (_erreur != null) setState(() => _erreur = null);
+                    },
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+
+          // Bouton toujours visible en bas
+          Container(
+            padding  : const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            decoration: BoxDecoration(
+              color    : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color    : Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset   : const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_erreur != null)
+                  Container(
+                    padding   : const EdgeInsets.all(12),
+                    margin    : const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color       : Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _erreur!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+                SizedBox(
+                  width : double.infinity,
+                  child : ElevatedButton(
+                    onPressed: _chargement ? null : _payer,
+                    style    : ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _chargement
+                      ? const SizedBox(
+                          width : 22, height: 22,
+                          child : CircularProgressIndicator(
+                            color      : Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : Text(
+                          'Payer ${widget.montant.toStringAsFixed(0)} FCFA',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -70,7 +70,15 @@ class SerialiseurUtilisateur(serializers.ModelSerializer):
     Utilisé pour afficher et modifier le profil d'un utilisateur.
     - Le mot de passe est exclu pour des raisons de sécurité
     - Le rôle est en lecture seule (seul l'admin peut le changer)
+    - Un superutilisateur Django est automatiquement traité comme admin
     """
+    role = serializers.SerializerMethodField()
+
+    def get_role(self, obj):
+        if obj.is_superuser:
+            return 'admin'
+        return obj.role
+
     class Meta:
         model  = Utilisateur
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'telephone', 'photo', 'role']
