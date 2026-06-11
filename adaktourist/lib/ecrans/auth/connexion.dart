@@ -89,7 +89,7 @@ class _EcranConnexionState extends State<EcranConnexion> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Tourisme CI',
+                  'ADAKTourist',
                   textAlign : TextAlign.center,
                   style     : TextStyle(
                     fontSize   : 28,

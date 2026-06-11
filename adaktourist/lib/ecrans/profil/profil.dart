@@ -2,6 +2,8 @@
 // Écran profil — affiche les informations de l'utilisateur connecté
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/api_service.dart';
 import '../../models/utilisateur.dart';
 import '../auth/connexion.dart';
@@ -15,8 +17,11 @@ class EcranProfil extends StatefulWidget {
 
 class _EcranProfilState extends State<EcranProfil> {
   Utilisateur? _utilisateur;
-  bool    _chargement = true;
+  bool    _chargement      = true;
+  bool    _envoiPhoto      = false;
   String? _erreur;
+
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -39,6 +44,63 @@ class _EcranProfilState extends State<EcranProfil> {
     });
   }
 }
+
+  Future<void> _choisirPhoto(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source      : source,
+      imageQuality: 80,
+      maxWidth    : 800,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _envoiPhoto = true);
+    try {
+      final result = await ApiService.mettreAJourPhotoProfil(picked);
+      if (mounted) {
+        setState(() => _utilisateur = Utilisateur.fromJson(result));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo de profil mise à jour !')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur lors de la mise à jour.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _envoiPhoto = false);
+    }
+  }
+
+  void _afficherChoixPhoto() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading : const Icon(Icons.camera_alt),
+              title   : const Text('Prendre une photo'),
+              onTap   : () {
+                Navigator.pop(context);
+                _choisirPhoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading : const Icon(Icons.photo_library),
+              title   : const Text('Choisir depuis la galerie'),
+              onTap   : () {
+                Navigator.pop(context);
+                _choisirPhoto(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _deconnecter() async {
     await ApiService.supprimerTokens();
@@ -94,16 +156,70 @@ class _EcranProfilState extends State<EcranProfil> {
               child  : Column(
                 children: [
 
-                  // Avatar
-                  CircleAvatar(
-                    radius          : 50,
-                    backgroundColor : const Color(0xFFF77F00),
-                    child           : Text(
-                      _utilisateur!.username[0].toUpperCase(),
-                      style: const TextStyle(
-                        fontSize  : 40,
-                        color     : Colors.white,
-                        fontWeight: FontWeight.bold,
+                  // Avatar cliquable
+                  GestureDetector(
+                    onTap: _envoiPhoto ? null : _afficherChoixPhoto,
+                    child: SizedBox(
+                      width : 110,
+                      height: 110,
+                      child : Stack(
+                        children: [
+                          Center(
+                            child: _envoiPhoto
+                              ? const SizedBox(
+                                  width : 100,
+                                  height: 100,
+                                  child : CircularProgressIndicator(
+                                    color: Color(0xFFF77F00),
+                                  ),
+                                )
+                              : CircleAvatar(
+                                  radius         : 50,
+                                  backgroundColor: const Color(0xFFF77F00),
+                                  child          : _utilisateur!.photo != null
+                                    ? ClipOval(
+                                        child: CachedNetworkImage(
+                                          imageUrl   : _utilisateur!.photo!,
+                                          width      : 100,
+                                          height     : 100,
+                                          fit        : BoxFit.cover,
+                                          errorWidget: (_, __, ___) => Text(
+                                            _utilisateur!.username[0].toUpperCase(),
+                                            style: const TextStyle(
+                                              fontSize  : 40,
+                                              color     : Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Text(
+                                        _utilisateur!.username[0].toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize  : 40,
+                                          color     : Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right : 0,
+                            child : Container(
+                              padding   : const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF77F00),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size : 18,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -125,7 +241,7 @@ class _EcranProfilState extends State<EcranProfil> {
                       horizontal: 12, vertical: 4,
                     ),
                     decoration : BoxDecoration(
-                      color        : const Color(0xFFF77F00).withOpacity(0.1),
+                      color        : const Color(0xFFF77F00).withValues(alpha: 0.1),
                       borderRadius : BorderRadius.circular(20),
                       border       : Border.all(
                         color: const Color(0xFFF77F00),

@@ -1,4 +1,4 @@
-// lib/screens/paiement/ecran_paiement.dart
+
 // Écran de paiement — choix du moyen de paiement
 
 import 'package:flutter/material.dart';
@@ -26,32 +26,11 @@ class _EcranPaiementState extends State<EcranPaiement> {
   bool    _chargement       = false;
   String? _erreur;
 
-  // Moyens de paiement disponibles
-  final List<Map<String, dynamic>> _moyens = [
-    {
-      'id'    : 'orange_money',
-      'nom'   : 'Orange Money',
-      'icone' : Icons.phone_android,
-      'couleur': Colors.orange,
-    },
-    {
-      'id'    : 'mtn_momo',
-      'nom'   : 'MTN MoMo',
-      'icone' : Icons.phone_android,
-      'couleur': Colors.yellow.shade700,
-    },
-    {
-      'id'    : 'wave',
-      'nom'   : 'Wave',
-      'icone' : Icons.waves,
-      'couleur': Colors.blue,
-    },
-    {
-      'id'    : 'carte',
-      'nom'   : 'Carte bancaire',
-      'icone' : Icons.credit_card,
-      'couleur': Colors.indigo,
-    },
+  final List<Map<String, String>> _moyens = [
+    {'id': 'orange_money', 'nom': 'Orange Money'},
+    {'id': 'mtn_momo',     'nom': 'MTN MoMo'},
+    {'id': 'wave',         'nom': 'Wave'},
+    {'id': 'moov_money',   'nom': 'Moov Money'},
   ];
 
   Future<void> _payer() async {
@@ -121,6 +100,185 @@ class _EcranPaiementState extends State<EcranPaiement> {
     }
   }
 
+  Widget _logoOperateur(String id) {
+    switch (id) {
+      case 'orange_money':
+        return Container(
+          width : 64, height: 42,
+          decoration: BoxDecoration(
+            color       : const Color(0xFFFF6600),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width : 18, height: 18,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(height: 3),
+              const Text(
+                'Orange',
+                style: TextStyle(
+                  color     : Colors.white,
+                  fontSize  : 8,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case 'mtn_momo':
+        return Container(
+          width : 64, height: 42,
+          decoration: BoxDecoration(
+            color       : const Color(0xFFFFCD00),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'MTN',
+                style: TextStyle(
+                  color     : Colors.black,
+                  fontSize  : 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                ),
+              ),
+              Text(
+                'MoMo',
+                style: TextStyle(
+                  color    : Colors.black87,
+                  fontSize : 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case 'wave':
+        return Container(
+          width : 64, height: 42,
+          decoration: BoxDecoration(
+            color       : const Color(0xFF1B64F1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                bottom: 4,
+                child: CustomPaint(
+                  size  : const Size(56, 14),
+                  painter: _WavePainter(),
+                ),
+              ),
+              const Text(
+                'wave',
+                style: TextStyle(
+                  color     : Colors.white,
+                  fontSize  : 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case 'moov_money':
+        return Container(
+          width : 64, height: 42,
+          decoration: BoxDecoration(
+            gradient    : const LinearGradient(
+              colors: [Color(0xFF00AEEF), Color(0xFF0072BC)],
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'MOOV',
+                style: TextStyle(
+                  color     : Colors.white,
+                  fontSize  : 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                ),
+              ),
+              Text(
+                'Money',
+                style: TextStyle(
+                  color    : Colors.white70,
+                  fontSize : 8,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+
+      default:
+        return const SizedBox(width: 64, height: 42);
+    }
+  }
+
+  Widget _cartePaiement(String id, String nom) {
+    final selectionne = _moyenSelectionne == id;
+    return GestureDetector(
+      onTap: () => setState(() => _moyenSelectionne = id),
+      child: AnimatedContainer(
+        duration  : const Duration(milliseconds: 180),
+        margin    : const EdgeInsets.only(bottom: 12),
+        padding   : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color       : selectionne
+            ? const Color(0xFFF77F00).withValues(alpha: 0.06)
+            : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border      : Border.all(
+            color: selectionne ? const Color(0xFFF77F00) : Colors.grey.shade200,
+            width: selectionne ? 2 : 1,
+          ),
+          boxShadow   : [
+            BoxShadow(
+              color  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset : const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _logoOperateur(id),
+            const SizedBox(width: 16),
+            Text(
+              nom,
+              style: const TextStyle(
+                fontSize  : 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            if (selectionne)
+              const Icon(Icons.check_circle, color: Color(0xFFF77F00), size: 24)
+            else
+              Icon(Icons.circle_outlined, color: Colors.grey.shade300, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -133,7 +291,7 @@ class _EcranPaiementState extends State<EcranPaiement> {
 
             // Résumé du paiement
             Card(
-              color : const Color(0xFFF77F00).withOpacity(0.1),
+              color : const Color(0xFFF77F00).withValues(alpha: 0.1),
               child : Padding(
                 padding: const EdgeInsets.all(16),
                 child  : Column(
@@ -178,23 +336,7 @@ class _EcranPaiementState extends State<EcranPaiement> {
             const SizedBox(height: 12),
 
             // Liste des moyens de paiement
-            ..._moyens.map((moyen) => RadioListTile<String>(
-              value    : moyen['id'],
-              groupValue: _moyenSelectionne,
-              onChanged: (val) =>
-                setState(() => _moyenSelectionne = val!),
-              activeColor: const Color(0xFFF77F00),
-              title    : Row(
-                children: [
-                  Icon(
-                    moyen['icone'],
-                    color: moyen['couleur'],
-                  ),
-                  const SizedBox(width: 12),
-                  Text(moyen['nom']),
-                ],
-              ),
-            )),
+            ..._moyens.map((moyen) => _cartePaiement(moyen['id']!, moyen['nom']!)),
 
             const Spacer(),
 
@@ -228,4 +370,32 @@ class _EcranPaiementState extends State<EcranPaiement> {
       ),
     );
   }
+}
+
+class _WavePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color       = Colors.white.withValues(alpha: 0.35)
+      ..style       = PaintingStyle.fill;
+    final path = Path();
+    path.moveTo(0, size.height * 0.6);
+    path.cubicTo(
+      size.width * 0.25, 0,
+      size.width * 0.5,  size.height,
+      size.width * 0.75, size.height * 0.3,
+    );
+    path.cubicTo(
+      size.width * 0.88, 0,
+      size.width,        size.height * 0.5,
+      size.width,        size.height * 0.5,
+    );
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
 }

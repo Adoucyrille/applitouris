@@ -135,7 +135,7 @@ class Reservation(models.Model):
     created_at       = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Réservation {self.id} - {self.utilisateur.username} → {self.site.nom}"
+        return f"Reservation {self.id} - {self.utilisateur.username} -> {self.site.nom}" #  Utilisation de -> au lieu de →
 
     def save(self, *args, **kwargs):
         # Calcul automatique du montant

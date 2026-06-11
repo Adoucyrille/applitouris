@@ -21,11 +21,14 @@ urlpatterns = [
     path('sites/creer/',       views.VueCreationSite.as_view(),  name='creer_site'),
     path('sites/mes-sites/',   views.VueMesSites.as_view(),      name='mes_sites'),
     path('sites/<int:pk>/',    views.VueDetailSite.as_view(),    name='detail_site'),
-    path('sites/<int:pk>/avis/', views.VueAvisSite.as_view(),    name='avis_site'),
+    path('sites/<int:pk>/avis/',    views.VueAvisSite.as_view(),     name='avis_site'),
+    path('sites/<int:pk>/photos/', views.VuePhotossite.as_view(),   name='photos_site'),
+    path('sites/photos/<int:pk>/', views.VueDetailPhotosite.as_view(), name='detail_photo'),
 
     # ── Réservations ──────────────────────────────────────
-    path('reservations/',          views.VueReservations.as_view(),      name='reservations'),
-    path('reservations/<int:pk>/', views.VueDetailReservation.as_view(), name='detail_reservation'),
+    path('reservations/',             views.VueReservations.as_view(),           name='reservations'),
+    path('reservations/mes-sites/',   views.VueReservationsMesSites.as_view(),   name='reservations_mes_sites'),
+    path('reservations/<int:pk>/',    views.VueDetailReservation.as_view(),      name='detail_reservation'),
 
    # ── Paiements ─────────────────────────────────────────────────
     path('paiements/initier/',

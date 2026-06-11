@@ -1,16 +1,16 @@
-// lib/ecrans/reservation/mes_reservations.dart
+// lib/ecrans/proprietaire/reservations_sites.dart
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/reservation.dart';
 
-class EcranMesReservations extends StatefulWidget {
-  const EcranMesReservations({super.key});
+class EcranReservationsSites extends StatefulWidget {
+  const EcranReservationsSites({super.key});
 
   @override
-  State<EcranMesReservations> createState() => _EcranMesReservationsState();
+  State<EcranReservationsSites> createState() => _EcranReservationsSitesState();
 }
 
-class _EcranMesReservationsState extends State<EcranMesReservations> {
+class _EcranReservationsSitesState extends State<EcranReservationsSites> {
   List<Reservation> _reservations = [];
   bool    _chargement = true;
   String? _erreur;
@@ -24,10 +24,10 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
   Future<void> _chargerReservations() async {
     setState(() => _chargement = true);
     try {
-      final data = await ApiService.getMesReservations();
+      final data = await ApiService.getReservationsMesSites();
       setState(() {
         _reservations = data
-          .map((r) => Reservation.fromJson(r))
+          .map((r) => Reservation.fromJson(r as Map<String, dynamic>))
           .toList();
         _chargement = false;
       });
@@ -51,7 +51,7 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes réservations')),
+      appBar: AppBar(title: const Text('Réservations reçues')),
       body  : _chargement
         ? const Center(
             child: CircularProgressIndicator(color: Color(0xFFF77F00)),
@@ -63,10 +63,10 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.book_online, size: 80, color: Colors.grey),
+                    Icon(Icons.event_busy, size: 80, color: Colors.grey),
                     SizedBox(height: 16),
                     Text(
-                      'Aucune réservation pour le moment.',
+                      'Aucune réservation reçue pour le moment.',
                       style: TextStyle(color: Colors.grey),
                     ),
                   ],
@@ -90,8 +90,7 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Expanded(
                                   child: Text(
@@ -117,8 +116,8 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
                                   child: Text(
                                     r.statutAffichage,
                                     style: TextStyle(
-                                      color    : _couleurStatut(r.statut),
-                                      fontSize : 12,
+                                      color     : _couleurStatut(r.statut),
+                                      fontSize  : 12,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -126,12 +125,19 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
                               ],
                             ),
                             const Divider(height: 24),
-                            _ligne(Icons.calendar_today, 'Date', r.dateVisite),
+                            _ligne(Icons.person,         'Touriste',   r.utilisateur),
                             const SizedBox(height: 8),
-                            _ligne(Icons.people, 'Personnes',
+                            _ligne(Icons.phone,           'Téléphone',
+                              r.telephoneUtilisateur.isNotEmpty
+                                ? r.telephoneUtilisateur
+                                : 'Non renseigné'),
+                            const SizedBox(height: 8),
+                            _ligne(Icons.calendar_today, 'Date',       r.dateVisite),
+                            const SizedBox(height: 8),
+                            _ligne(Icons.people,         'Personnes',
                               '${r.nombrePersonnes} personne(s)'),
                             const SizedBox(height: 8),
-                            _ligne(Icons.payments, 'Montant',
+                            _ligne(Icons.payments,       'Montant',
                               '${r.montantTotal.toStringAsFixed(0)} FCFA'),
                           ],
                         ),
@@ -149,7 +155,12 @@ class _EcranMesReservationsState extends State<EcranMesReservations> {
         Icon(icone, size: 16, color: const Color(0xFFF77F00)),
         const SizedBox(width: 8),
         Text('$label : ', style: const TextStyle(color: Colors.grey)),
-        Text(valeur, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Expanded(
+          child: Text(
+            valeur,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
       ],
     );
   }

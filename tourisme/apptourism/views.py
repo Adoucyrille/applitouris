@@ -7,15 +7,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
 from .models import (
     Utilisateur, Region, Categorie,
-    SiteTouristique, Avis, Reservation, Paiement
+    SiteTouristique, PhotoSite, Avis, Reservation, Paiement
 )
 from .serializers import (
     SerialiseurInscription, SerialiseurUtilisateur,
     SerialiseurRegion, SerialiseurCategorie,
     SerialiseurListeSites, SerialiseurDetailSite,
-    SerialiseurCreationSite, SerialiseurAvis,
-    SerialiseurCreationAvis, SerialiseurReservation,
-    SerialiseurCreationReservation, SerialiseurPaiement
+    SerialiseurCreationSite, SerialiseurPhoto,
+    SerialiseurAvis, SerialiseurCreationAvis,
+    SerialiseurReservation, SerialiseurCreationReservation,
+    SerialiseurPaiement
 )
 from .permissions import (
     EstAdmin, EstProprietaire,
@@ -37,7 +38,7 @@ class VueInscription(APIView):
             refresh = RefreshToken.for_user(utilisateur)
             return Response({
                 "message"       : "Compte créé avec succès.",
-                "utilisateur"   : SerialiseurUtilisateur(utilisateur).data,
+                "utilisateur"   : SerialiseurUtilisateur(utilisateur, context={'request': request}).data,
                 "access_token"  : str(refresh.access_token),
                 "refresh_token" : str(refresh),
             }, status=status.HTTP_201_CREATED)
@@ -74,7 +75,7 @@ class VueConnexion(APIView):
         refresh = RefreshToken.for_user(utilisateur)
         return Response({
             "message"       : "Connexion réussie.",
-            "utilisateur"   : SerialiseurUtilisateur(utilisateur).data,
+            "utilisateur"   : SerialiseurUtilisateur(utilisateur, context={'request': request}).data,
             "access_token"  : str(refresh.access_token),
             "refresh_token" : str(refresh),
         }, status=status.HTTP_200_OK)
@@ -100,12 +101,13 @@ class VueProfil(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        serialiseur = SerialiseurUtilisateur(request.user)
+        serialiseur = SerialiseurUtilisateur(request.user, context={'request': request})
         return Response(serialiseur.data)
 
     def put(self, request):
         serialiseur = SerialiseurUtilisateur(
-            request.user, data=request.data, partial=True
+            request.user, data=request.data, partial=True,
+            context={'request': request}
         )
         if serialiseur.is_valid():
             serialiseur.save()
@@ -158,16 +160,16 @@ class VueListeSites(APIView):
         if recherche:
             sites = sites.filter(nom__icontains=recherche)
 
-        serialiseur = SerialiseurListeSites(sites, many=True)
+        serialiseur = SerialiseurListeSites(sites, many=True, context={'request': request})
         return Response(serialiseur.data)
 
 
 class VueDetailSite(APIView):
-    permission_classes = [EstProprietaireDuSite]
+    permission_classes = [LectureLibre]
 
     def get(self, request, pk):
         site        = get_object_or_404(SiteTouristique, pk=pk)
-        serialiseur = SerialiseurDetailSite(site)
+        serialiseur = SerialiseurDetailSite(site, context={'request': request})
         return Response(serialiseur.data)
 
     def put(self, request, pk):
@@ -206,7 +208,7 @@ class VueCreationSite(APIView):
             site = serialiseur.save()
             return Response({
                 "message": "Site touristique ajouté avec succès.",
-                "site"   : SerialiseurDetailSite(site).data
+                "site"   : SerialiseurDetailSite(site, context={'request': request}).data
             }, status=status.HTTP_201_CREATED)
         return Response(serialiseur.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -216,8 +218,52 @@ class VueMesSites(APIView):
 
     def get(self, request):
         sites       = SiteTouristique.objects.filter(proprietaire=request.user)
-        serialiseur = SerialiseurListeSites(sites, many=True)
+        serialiseur = SerialiseurListeSites(sites, many=True, context={'request': request})
         return Response(serialiseur.data)
+
+
+# ═══════════════════════════════════════════════
+# SECTION 3b : PHOTOS D'UN SITE
+# ═══════════════════════════════════════════════
+
+class VuePhotossite(APIView):
+    permission_classes = [LectureLibre]
+
+    def get(self, request, pk):
+        site        = get_object_or_404(SiteTouristique, pk=pk)
+        photos      = site.photos.all()
+        serialiseur = SerialiseurPhoto(photos, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+    def post(self, request, pk):
+        site = get_object_or_404(SiteTouristique, pk=pk)
+        if site.proprietaire != request.user:
+            return Response(
+                {"erreur": "Vous n'êtes pas le propriétaire de ce site."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serialiseur = SerialiseurPhoto(data=request.data, context={'request': request})
+        if serialiseur.is_valid():
+            serialiseur.save(site=site)
+            return Response(serialiseur.data, status=status.HTTP_201_CREATED)
+        return Response(serialiseur.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VueDetailPhotosite(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        photo = get_object_or_404(PhotoSite, pk=pk)
+        if photo.site.proprietaire != request.user:
+            return Response(
+                {"erreur": "Vous n'êtes pas le propriétaire de ce site."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        photo.delete()
+        return Response(
+            {"message": "Photo supprimée avec succès."},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 
 # ═══════════════════════════════════════════════
@@ -278,6 +324,17 @@ class VueReservations(APIView):
                 "reservation" : SerialiseurReservation(reservation).data
             }, status=status.HTTP_201_CREATED)
         return Response(serialiseur.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VueReservationsMesSites(APIView):
+    permission_classes = [EstProprietaire]
+
+    def get(self, request):
+        reservations = Reservation.objects.filter(
+            site__proprietaire=request.user
+        ).order_by('-created_at')
+        serialiseur = SerialiseurReservation(reservations, many=True)
+        return Response(serialiseur.data)
 
 
 class VueDetailReservation(APIView):

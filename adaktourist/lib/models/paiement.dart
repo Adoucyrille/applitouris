@@ -1,4 +1,4 @@
-// Représente un paiement
+// lib/models/paiement.dart
 class Paiement {
   final int    id;
   final int    reservation;
@@ -20,13 +20,15 @@ class Paiement {
 
   factory Paiement.fromJson(Map<String, dynamic> json) {
     return Paiement(
-      id            : json['id'],
-      reservation   : json['reservation'],
-      montant       : double.parse(json['montant'].toString()),
-      moyenPaiement : json['moyen_paiement'],
-      statut        : json['statut'],
-      transactionId : json['transaction_id'] ?? '',
-      createdAt     : json['created_at'],
+      id            : json['id'] ?? 0,
+      reservation   : json['reservation'] ?? 0,
+      montant       : double.tryParse(
+                        json['montant']?.toString() ?? '0'
+                      ) ?? 0.0,
+      moyenPaiement : json['moyen_paiement']?.toString() ?? '',
+      statut        : json['statut']?.toString() ?? 'en_attente',
+      transactionId : json['transaction_id']?.toString() ?? '',
+      createdAt     : json['created_at']?.toString() ?? '',
     );
   }
 }

@@ -16,7 +16,7 @@ class AppTourisme extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title       : 'Tourisme Côte d\'Ivoire',
+      title       : 'ADAKTourist',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         // Couleurs inspirées du drapeau ivoirien
@@ -65,16 +65,11 @@ class _EcranDemarrageState extends State<EcranDemarrage> {
   }
 
   Future<void> _verifierConnexion() async {
-    // Vérifier si un token est stocké
-    final estConnecte = await ApiService.estConnecte();
+    await ApiService.estConnecte(); // préchargement du token
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => estConnecte
-              ? const EcranAccueil()
-              : const EcranConnexion(),
-        ),
+        MaterialPageRoute(builder: (_) => const EcranAccueil()),
       );
     }
   }
@@ -91,7 +86,7 @@ class _EcranDemarrageState extends State<EcranDemarrage> {
             Icon(Icons.travel_explore, size: 80, color: Colors.white),
             SizedBox(height: 16),
             Text(
-              'Tourisme CI',
+              'ADAKTourist',
               style: TextStyle(
                 color    : Colors.white,
                 fontSize : 28,

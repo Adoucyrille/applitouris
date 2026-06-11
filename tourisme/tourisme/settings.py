@@ -43,8 +43,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'cloudinary',
-    'cloudinary_storage',
     'apptourism',
 ]
 
@@ -130,6 +128,10 @@ USE_TZ        = True
 
 # ── Fichiers statiques ────────────────────────────────────────
 STATIC_URL = 'static/'
+
+# ── Fichiers media (photos des sites et des profils) ──────────
+MEDIA_URL  = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ── Clé primaire par défaut ───────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

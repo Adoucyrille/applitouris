@@ -36,8 +36,9 @@ class SerialiseurInscription(serializers.ModelSerializer):
         modele  = Utilisateur
         model   = Utilisateur
         fields  = [
-            'id', 'username', 'email', 'telephone',
-            'role', 'mot_de_passe', 'confirmation_mot_de_passe'
+            'id', 'username', 'first_name', 'last_name',
+            'email', 'telephone', 'role',
+            'mot_de_passe', 'confirmation_mot_de_passe'
         ]
 
     def validate(self, donnees):
@@ -72,7 +73,7 @@ class SerialiseurUtilisateur(serializers.ModelSerializer):
     """
     class Meta:
         model  = Utilisateur
-        fields = ['id', 'username', 'email', 'telephone', 'photo', 'role']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'telephone', 'photo', 'role']
         read_only_fields = ['role']
 
 
@@ -247,13 +248,14 @@ class SerialiseurReservation(serializers.ModelSerializer):
     Flutter l'utilise dans la page "Mes réservations" du touriste.
     """
     # Afficher les noms lisibles au lieu des identifiants
-    site        = serializers.CharField(source='site.nom',              read_only=True)
-    utilisateur = serializers.CharField(source='utilisateur.username',  read_only=True)
+    site                  = serializers.CharField(source='site.nom',                read_only=True)
+    utilisateur           = serializers.CharField(source='utilisateur.username',    read_only=True)
+    telephone_utilisateur = serializers.CharField(source='utilisateur.telephone',   read_only=True)
 
     class Meta:
         model  = Reservation
         fields = [
-            'id', 'utilisateur', 'site', 'date_visite',
+            'id', 'utilisateur', 'telephone_utilisateur', 'site', 'date_visite',
             'nombre_personnes', 'montant_total', 'statut', 'created_at'
         ]
 
