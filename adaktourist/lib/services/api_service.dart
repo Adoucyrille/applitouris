@@ -344,6 +344,124 @@ class ApiService {
     return jsonDecode(utf8.decode(reponse.bodyBytes));
   }
 
+  // ── Hôtels ────────────────────────────────────────────
+  static Future<Map<String, dynamic>> creerHotel({
+    required String nom,
+    required String description,
+    required String adresse,
+    required String telephone,
+    required String latitude,
+    required String longitude,
+    required String gamme,
+    required String prixMin,
+    required int    regionId,
+    XFile?          image,
+  }) async {
+    final token   = await getAccessToken();
+    final request = http.MultipartRequest('POST', Uri.parse(ApiConfig.creerHotel));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields.addAll({
+      'nom'        : nom,
+      'description': description,
+      'adresse'    : adresse,
+      'telephone'  : telephone,
+      'latitude'   : latitude,
+      'longitude'  : longitude,
+      'gamme'      : gamme,
+      'prix_min'   : prixMin,
+      'region'     : regionId.toString(),
+    });
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: image.name));
+    }
+    final streamed = await request.send();
+    final reponse  = await http.Response.fromStream(streamed);
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  static Future<Map<String, dynamic>> creerRestaurant({
+    required String nom,
+    required String description,
+    required String adresse,
+    required String telephone,
+    required String latitude,
+    required String longitude,
+    required String typeCuisine,
+    required String specialites,
+    required String prixMoyen,
+    required int    regionId,
+    XFile?          image,
+  }) async {
+    final token   = await getAccessToken();
+    final request = http.MultipartRequest('POST', Uri.parse(ApiConfig.creerRestaurant));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields.addAll({
+      'nom'         : nom,
+      'description' : description,
+      'adresse'     : adresse,
+      'telephone'   : telephone,
+      'latitude'    : latitude,
+      'longitude'   : longitude,
+      'type_cuisine': typeCuisine,
+      'specialites' : specialites,
+      'prix_moyen'  : prixMoyen,
+      'region'      : regionId.toString(),
+    });
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: image.name));
+    }
+    final streamed = await request.send();
+    final reponse  = await http.Response.fromStream(streamed);
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  static Future<List<dynamic>> getMesHotels() async {
+    final headers = await headersPrives();
+    final reponse = await http.get(Uri.parse(ApiConfig.mesHotels), headers: headers);
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  static Future<List<dynamic>> getMesRestaurants() async {
+    final headers = await headersPrives();
+    final reponse = await http.get(Uri.parse(ApiConfig.mesRestaurants), headers: headers);
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  static Future<List<dynamic>> getHotelsRegion(int regionId) async {
+    final reponse = await http.get(
+      Uri.parse(ApiConfig.hotelsRegion(regionId)),
+      headers: headersPublics,
+    );
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  static Future<List<dynamic>> getHotelsProximite(int siteId, {int rayon = 10}) async {
+    final reponse = await http.get(
+      Uri.parse(ApiConfig.hotelsProximite(siteId, rayon: rayon)),
+      headers: headersPublics,
+    );
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  // ── Restaurants ───────────────────────────────────────
+  static Future<List<dynamic>> getRestaurantsRegion(int regionId) async {
+    final reponse = await http.get(
+      Uri.parse(ApiConfig.restaurantsRegion(regionId)),
+      headers: headersPublics,
+    );
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
+  static Future<List<dynamic>> getRestaurantsProximite(int siteId, {int rayon = 10}) async {
+    final reponse = await http.get(
+      Uri.parse(ApiConfig.restaurantsProximite(siteId, rayon: rayon)),
+      headers: headersPublics,
+    );
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
+  }
+
   // ── Administration ────────────────────────────────────
   static Future<Map<String, dynamic>> getTableauBordAdmin() async {
     final headers = await headersPrives();

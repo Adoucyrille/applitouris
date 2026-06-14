@@ -4,6 +4,7 @@ import '../../services/api_service.dart';
 import '../../models/sites.dart';
 import 'ajout_site.dart';
 import 'reservations_sites.dart';
+import 'mes_hotels_restaurants.dart';
 
 class EcranMesSites extends StatefulWidget {
   const EcranMesSites({super.key});
@@ -83,6 +84,14 @@ class _EcranMesSitesState extends State<EcranMesSites> {
       appBar: AppBar(
         title  : const Text('Mes sites touristiques'),
         actions: [
+          IconButton(
+            icon     : const Icon(Icons.hotel),
+            tooltip  : 'Mes hôtels & restaurants',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EcranMesHotelsRestaurants()),
+            ),
+          ),
           IconButton(
             icon   : const Icon(Icons.book_online),
             tooltip: 'Réservations reçues',

@@ -6,6 +6,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/api_service.dart';
 import '../auth/connexion.dart';
 import '../reservation/reservation.dart';
+import '../hebergement/hotels.dart';
+import '../gastronomie/restaurants.dart';
 
 class EcranDetailSite extends StatefulWidget {
   final int siteId;
@@ -17,8 +19,11 @@ class EcranDetailSite extends StatefulWidget {
 
 class _EcranDetailSiteState extends State<EcranDetailSite> {
   Map<String, dynamic>? _site;
-  bool   _chargement = true;
+  bool   _chargement        = true;
   String? _erreur;
+
+  List<dynamic> _hotelsProches      = [];
+  List<dynamic> _restaurantsProches = [];
 
   // Avis
   int     _noteAvis              = 0;
@@ -86,11 +91,17 @@ class _EcranDetailSiteState extends State<EcranDetailSite> {
   Future<void> _chargerSite() async {
     final connecte = await ApiService.estConnecte();
     try {
-      final data = await ApiService.getDetailSite(widget.siteId);
+      final results = await Future.wait([
+        ApiService.getDetailSite(widget.siteId),
+        ApiService.getHotelsProximite(widget.siteId),
+        ApiService.getRestaurantsProximite(widget.siteId),
+      ]);
       setState(() {
-        _site        = data;
-        _chargement  = false;
-        _estConnecte = connecte;
+        _site               = results[0] as Map<String, dynamic>;
+        _hotelsProches      = results[1] as List<dynamic>;
+        _restaurantsProches = results[2] as List<dynamic>;
+        _chargement         = false;
+        _estConnecte        = connecte;
       });
     } catch (e) {
       setState(() {
@@ -243,7 +254,7 @@ class _EcranDetailSiteState extends State<EcranDetailSite> {
                         child: Text(
                           (double.tryParse(site['prix_entree']?.toString() ?? '0') ?? 0) == 0
                             ? 'Gratuit'
-                            : '${site['prix_entree']} FCFA / personne',
+                            : '${(double.tryParse(site['prix_entree']?.toString() ?? '0') ?? 0).toStringAsFixed(0)} FCFA / personne',
                           style: const TextStyle(
                             color      : Colors.white,
                             fontWeight : FontWeight.bold,
@@ -549,6 +560,46 @@ class _EcranDetailSiteState extends State<EcranDetailSite> {
                     ),
                   ],
 
+                  const SizedBox(height: 24),
+
+                  // ── Hôtels à proximité ──────────────────────
+                  _SectionProximite(
+                    titre    : 'Hôtels à proximité',
+                    icone    : Icons.hotel,
+                    couleur  : const Color(0xFFF77F00),
+                    elements : _hotelsProches,
+                    voirTout : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EcranHotels(
+                          siteId: widget.siteId,
+                          titre : 'Hôtels à proximité',
+                        ),
+                      ),
+                    ),
+                    construireItem: (item) => _CarteHotelMini(hotel: item),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Restaurants à proximité ─────────────────
+                  _SectionProximite(
+                    titre    : 'Restaurants à proximité',
+                    icone    : Icons.restaurant,
+                    couleur  : const Color(0xFF009A44),
+                    elements : _restaurantsProches,
+                    voirTout : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EcranRestaurants(
+                          siteId: widget.siteId,
+                          titre : 'Restaurants à proximité',
+                        ),
+                      ),
+                    ),
+                    construireItem: (item) => _CarteRestaurantMini(restaurant: item),
+                  ),
+
                   const SizedBox(height: 80),
                 ],
               ),
@@ -610,4 +661,248 @@ class _EcranDetailSiteState extends State<EcranDetailSite> {
         FloatingActionButtonLocation.centerFloat,
     );
   }
+}
+
+
+// ─── Widget réutilisable : section "à proximité" ─────────────────────────────
+class _SectionProximite extends StatelessWidget {
+  final String        titre;
+  final IconData      icone;
+  final Color         couleur;
+  final List<dynamic> elements;
+  final VoidCallback  voirTout;
+  final Widget Function(Map<String, dynamic>) construireItem;
+
+  const _SectionProximite({
+    required this.titre,
+    required this.icone,
+    required this.couleur,
+    required this.elements,
+    required this.voirTout,
+    required this.construireItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(icone, color: couleur, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  titre,
+                  style: const TextStyle(
+                    fontSize  : 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            TextButton(
+              onPressed: voirTout,
+              child: Text(
+                'Voir tout',
+                style: TextStyle(color: couleur),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (elements.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Aucun résultat à proximité.',
+              style: const TextStyle(color: Colors.grey),
+            ),
+          )
+        else
+          SizedBox(
+            height: 170,
+            child: ListView.separated(
+              scrollDirection : Axis.horizontal,
+              itemCount       : elements.length > 5 ? 5 : elements.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, i) =>
+                  construireItem(elements[i] as Map<String, dynamic>),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+
+// ─── Carte miniature : Hôtel ──────────────────────────────────────────────────
+class _CarteHotelMini extends StatelessWidget {
+  final Map<String, dynamic> hotel;
+  const _CarteHotelMini({required this.hotel});
+
+  @override
+  Widget build(BuildContext context) {
+    final distance = hotel['distance_km'];
+    final prixMin  = double.tryParse(hotel['prix_min']?.toString() ?? '0') ?? 0;
+
+    return Container(
+      width      : 150,
+      decoration : BoxDecoration(
+        color       : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow   : [
+          BoxShadow(
+            color        : Colors.black.withValues(alpha: 0.08),
+            blurRadius   : 6,
+            offset       : const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: hotel['image'] != null
+                ? CachedNetworkImage(
+                    imageUrl  : hotel['image'],
+                    height    : 90,
+                    width     : 150,
+                    fit       : BoxFit.cover,
+                    errorWidget: (_, __, ___) => _placeholderHotel(),
+                  )
+                : _placeholderHotel(),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hotel['nom']?.toString() ?? '',
+                  style   : const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  prixMin == 0
+                      ? 'Prix sur demande'
+                      : '${prixMin.toStringAsFixed(0)} FCFA',
+                  style: const TextStyle(
+                    color    : Color(0xFF009A44),
+                    fontSize : 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (distance != null)
+                  Text(
+                    '$distance km',
+                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _placeholderHotel() => Container(
+    height: 90, width: 150,
+    color : Colors.grey.shade200,
+    child : const Icon(Icons.hotel, color: Colors.grey),
+  );
+}
+
+
+// ─── Carte miniature : Restaurant ────────────────────────────────────────────
+class _CarteRestaurantMini extends StatelessWidget {
+  final Map<String, dynamic> restaurant;
+  const _CarteRestaurantMini({required this.restaurant});
+
+  @override
+  Widget build(BuildContext context) {
+    final distance    = restaurant['distance_km'];
+    final typeCuisine = restaurant['type_cuisine']?.toString() ?? '';
+
+    return Container(
+      width      : 150,
+      decoration : BoxDecoration(
+        color       : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow   : [
+          BoxShadow(
+            color     : Colors.black.withValues(alpha: 0.08),
+            blurRadius: 6,
+            offset    : const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: restaurant['image'] != null
+                ? CachedNetworkImage(
+                    imageUrl  : restaurant['image'],
+                    height    : 90,
+                    width     : 150,
+                    fit       : BoxFit.cover,
+                    errorWidget: (_, __, ___) => _placeholderResto(),
+                  )
+                : _placeholderResto(),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  restaurant['nom']?.toString() ?? '',
+                  style   : const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color       : const Color(0xFFF77F00).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    typeCuisine == 'maquis' ? 'Maquis' : typeCuisine,
+                    style: const TextStyle(
+                      color    : Color(0xFFF77F00),
+                      fontSize : 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (distance != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '$distance km',
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _placeholderResto() => Container(
+    height: 90, width: 150,
+    color : Colors.grey.shade200,
+    child : const Icon(Icons.restaurant, color: Colors.grey),
+  );
 }

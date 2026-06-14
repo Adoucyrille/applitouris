@@ -8,7 +8,10 @@ from django.contrib.auth.password_validation import validate_password
 from .models import (
     Utilisateur, Region, Categorie,
     SiteTouristique, PhotoSite,
-    Avis, Reservation, Paiement
+    Avis, Reservation, Paiement,
+    Hotel, Restaurant, EvenementTouristique,
+    CircuitTouristique, EtapeCircuit,
+    GuideTouristique, Transport
 )
 
 
@@ -316,3 +319,116 @@ class SerialiseurPaiement(serializers.ModelSerializer):
         # Ces champs sont mis à jour uniquement par CinetPay via webhook
         # Flutter ne peut pas les modifier directement
         read_only_fields = ['statut', 'transaction_id']
+
+
+# ─────────────────────────────────────────────────────────────
+# SÉRIALISEUR : HÔTEL
+# ─────────────────────────────────────────────────────────────
+class SerialiseurHotel(serializers.ModelSerializer):
+    region_nom = serializers.CharField(source='region.nom', read_only=True)
+
+    class Meta:
+        model  = Hotel
+        fields = [
+            'id', 'nom', 'description', 'region', 'region_nom', 'adresse', 'telephone',
+            'latitude', 'longitude', 'gamme', 'prix_min', 'image', 'est_actif'
+        ]
+
+
+# ─────────────────────────────────────────────────────────────
+# SÉRIALISEUR : RESTAURANT
+# ─────────────────────────────────────────────────────────────
+class SerialiseurRestaurant(serializers.ModelSerializer):
+    region_nom = serializers.CharField(source='region.nom', read_only=True)
+
+    class Meta:
+        model  = Restaurant
+        fields = [
+            'id', 'nom', 'description', 'region', 'region_nom', 'adresse', 'telephone',
+            'latitude', 'longitude', 'type_cuisine', 'specialites',
+            'prix_moyen', 'image', 'est_actif'
+        ]
+
+
+# ─────────────────────────────────────────────────────────────
+# SÉRIALISEUR : ÉVÉNEMENT TOURISTIQUE
+# ─────────────────────────────────────────────────────────────
+class SerialiseurEvenement(serializers.ModelSerializer):
+    region = serializers.CharField(source='region.nom', read_only=True)
+    site   = serializers.CharField(source='site.nom',   read_only=True)
+
+    class Meta:
+        model  = EvenementTouristique
+        fields = [
+            'id', 'nom', 'description', 'type_event',
+            'region', 'site', 'adresse', 'latitude', 'longitude',
+            'date_debut', 'date_fin', 'prix_entree', 'image', 'est_actif'
+        ]
+
+
+# ─────────────────────────────────────────────────────────────
+# SÉRIALISEUR : ÉTAPE DE CIRCUIT
+# ─────────────────────────────────────────────────────────────
+class SerialiseurEtapeCircuit(serializers.ModelSerializer):
+    site_nom      = serializers.CharField(source='site.nom',       read_only=True)
+    site_image    = serializers.ImageField(source='site.image',    read_only=True)
+    site_latitude = serializers.DecimalField(source='site.latitude',  max_digits=9, decimal_places=6, read_only=True)
+    site_longitude= serializers.DecimalField(source='site.longitude', max_digits=9, decimal_places=6, read_only=True)
+
+    class Meta:
+        model  = EtapeCircuit
+        fields = ['ordre', 'site', 'site_nom', 'site_image', 'site_latitude', 'site_longitude', 'description_etape']
+
+
+# ─────────────────────────────────────────────────────────────
+# SÉRIALISEUR : CIRCUIT TOURISTIQUE
+# ─────────────────────────────────────────────────────────────
+class SerialiseurCircuit(serializers.ModelSerializer):
+    regions = serializers.SerializerMethodField()
+    etapes  = SerialiseurEtapeCircuit(many=True, read_only=True)
+
+    def get_regions(self, obj):
+        return [r.nom for r in obj.regions.all()]
+
+    class Meta:
+        model  = CircuitTouristique
+        fields = [
+            'id', 'nom', 'description', 'regions', 'duree_jours',
+            'prix', 'niveau', 'image', 'est_actif', 'etapes'
+        ]
+
+
+# ─────────────────────────────────────────────────────────────
+# SÉRIALISEUR : GUIDE TOURISTIQUE
+# ─────────────────────────────────────────────────────────────
+class SerialiseurGuide(serializers.ModelSerializer):
+    regions_couvertes = serializers.SerializerMethodField()
+
+    def get_regions_couvertes(self, obj):
+        return [r.nom for r in obj.regions_couvertes.all()]
+
+    class Meta:
+        model  = GuideTouristique
+        fields = [
+            'id', 'nom', 'prenom', 'telephone', 'email', 'photo',
+            'langues_parlees', 'regions_couvertes', 'specialites',
+            'tarif_journalier', 'annees_experience',
+            'est_certifie', 'est_disponible'
+        ]
+
+
+# ─────────────────────────────────────────────────────────────
+# SÉRIALISEUR : TRANSPORT
+# ─────────────────────────────────────────────────────────────
+class SerialiseurTransport(serializers.ModelSerializer):
+    region_depart  = serializers.CharField(source='region_depart.nom',  read_only=True)
+    region_arrivee = serializers.CharField(source='region_arrivee.nom', read_only=True)
+    type_label     = serializers.CharField(source='get_type_transport_display', read_only=True)
+
+    class Meta:
+        model  = Transport
+        fields = [
+            'id', 'type_transport', 'type_label', 'compagnie',
+            'region_depart', 'region_arrivee', 'ville_depart', 'ville_arrivee',
+            'prix', 'duree_minutes', 'horaires', 'telephone_contact'
+        ]

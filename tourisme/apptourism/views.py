@@ -6,9 +6,12 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
 from datetime import date, datetime, timedelta, timezone as dt_timezone
+import math
 from .models import (
     Utilisateur, Region, Categorie,
-    SiteTouristique, PhotoSite, Avis, Reservation, Paiement
+    SiteTouristique, PhotoSite, Avis, Reservation, Paiement,
+    Hotel, Restaurant, EvenementTouristique,
+    CircuitTouristique, GuideTouristique, Transport
 )
 from .serializers import (
     SerialiseurInscription, SerialiseurUtilisateur,
@@ -17,7 +20,9 @@ from .serializers import (
     SerialiseurCreationSite, SerialiseurPhoto,
     SerialiseurAvis, SerialiseurCreationAvis,
     SerialiseurReservation, SerialiseurCreationReservation,
-    SerialiseurPaiement
+    SerialiseurPaiement,
+    SerialiseurHotel, SerialiseurRestaurant, SerialiseurEvenement,
+    SerialiseurCircuit, SerialiseurGuide, SerialiseurTransport
 )
 from .permissions import (
     EstAdmin, EstProprietaire,
@@ -535,3 +540,295 @@ class VueTableauBordAdmin(APIView):
                                        ),
         }
         return Response(statistiques)
+
+
+# ═══════════════════════════════════════════════
+# SECTION 8 : HÉBERGEMENTS (HÔTELS)
+# ═══════════════════════════════════════════════
+
+def _distance_km(lat1, lon1, lat2, lon2):
+    """Calcule la distance en km entre deux points GPS (formule Haversine)."""
+    R = 6371
+    dlat = math.radians(float(lat2) - float(lat1))
+    dlon = math.radians(float(lon2) - float(lon1))
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(float(lat1))) * math.cos(math.radians(float(lat2))) * math.sin(dlon / 2) ** 2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+class VueListeHotels(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        hotels    = Hotel.objects.filter(est_actif=True)
+        region_id = request.query_params.get('region')
+        if region_id:
+            hotels = hotels.filter(region__id=region_id)
+        serialiseur = SerialiseurHotel(hotels, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({'erreur': 'Connexion requise.'}, status=status.HTTP_401_UNAUTHORIZED)
+        est_autorise = request.user.is_superuser or request.user.role in ('admin', 'proprietaire')
+        if not est_autorise:
+            return Response({'erreur': 'Accès réservé aux propriétaires et administrateurs.'}, status=status.HTTP_403_FORBIDDEN)
+        serialiseur = SerialiseurHotel(data=request.data, context={'request': request})
+        if serialiseur.is_valid():
+            hotel = serialiseur.save(proprietaire=request.user)
+            return Response(SerialiseurHotel(hotel, context={'request': request}).data, status=status.HTTP_201_CREATED)
+        return Response(serialiseur.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VueMesHotels(APIView):
+    """Hôtels appartenant au propriétaire connecté."""
+    permission_classes = [EstProprietaire]
+
+    def get(self, request):
+        hotels      = Hotel.objects.filter(proprietaire=request.user)
+        serialiseur = SerialiseurHotel(hotels, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+
+class VueHotelsProximiteSite(APIView):
+    """Retourne les hôtels à moins de <rayon> km d'un site touristique (défaut 10 km)."""
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        site  = get_object_or_404(SiteTouristique, pk=pk)
+        rayon = float(request.query_params.get('rayon', 10))
+
+        hotels_proches = []
+        for hotel in Hotel.objects.filter(est_actif=True):
+            dist = _distance_km(site.latitude, site.longitude, hotel.latitude, hotel.longitude)
+            if dist <= rayon:
+                hotels_proches.append({'hotel': hotel, 'distance_km': round(dist, 2)})
+
+        hotels_proches.sort(key=lambda x: x['distance_km'])
+
+        data = []
+        for item in hotels_proches:
+            hotel_data = SerialiseurHotel(item['hotel'], context={'request': request}).data
+            hotel_data['distance_km'] = item['distance_km']
+            data.append(hotel_data)
+
+        return Response(data)
+
+
+# ═══════════════════════════════════════════════
+# SECTION 9 : RESTAURANTS / GASTRONOMIE
+# ═══════════════════════════════════════════════
+
+class VueListeRestaurants(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        restaurants  = Restaurant.objects.filter(est_actif=True)
+        region_id    = request.query_params.get('region')
+        type_cuisine = request.query_params.get('type_cuisine')
+        if region_id:
+            restaurants = restaurants.filter(region__id=region_id)
+        if type_cuisine:
+            restaurants = restaurants.filter(type_cuisine=type_cuisine)
+        serialiseur = SerialiseurRestaurant(restaurants, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({'erreur': 'Connexion requise.'}, status=status.HTTP_401_UNAUTHORIZED)
+        est_autorise = request.user.is_superuser or request.user.role in ('admin', 'proprietaire')
+        if not est_autorise:
+            return Response({'erreur': 'Accès réservé aux propriétaires et administrateurs.'}, status=status.HTTP_403_FORBIDDEN)
+        serialiseur = SerialiseurRestaurant(data=request.data, context={'request': request})
+        if serialiseur.is_valid():
+            restaurant = serialiseur.save(proprietaire=request.user)
+            return Response(SerialiseurRestaurant(restaurant, context={'request': request}).data, status=status.HTTP_201_CREATED)
+        return Response(serialiseur.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VueMesRestaurants(APIView):
+    """Restaurants appartenant au propriétaire connecté."""
+    permission_classes = [EstProprietaire]
+
+    def get(self, request):
+        restaurants = Restaurant.objects.filter(proprietaire=request.user)
+        serialiseur = SerialiseurRestaurant(restaurants, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+
+class VueRestaurantsProximiteSite(APIView):
+    """Retourne les restaurants à moins de <rayon> km d'un site touristique (défaut 10 km)."""
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        site  = get_object_or_404(SiteTouristique, pk=pk)
+        rayon = float(request.query_params.get('rayon', 10))
+
+        restaurants_proches = []
+        for resto in Restaurant.objects.filter(est_actif=True):
+            dist = _distance_km(site.latitude, site.longitude, resto.latitude, resto.longitude)
+            if dist <= rayon:
+                restaurants_proches.append({'restaurant': resto, 'distance_km': round(dist, 2)})
+
+        restaurants_proches.sort(key=lambda x: x['distance_km'])
+
+        data = []
+        for item in restaurants_proches:
+            resto_data = SerialiseurRestaurant(item['restaurant'], context={'request': request}).data
+            resto_data['distance_km'] = item['distance_km']
+            data.append(resto_data)
+
+        return Response(data)
+
+
+# ═══════════════════════════════════════════════
+# SECTION 10 : ÉVÉNEMENTS TOURISTIQUES
+# ═══════════════════════════════════════════════
+
+class VueListeEvenements(APIView):
+    """
+    Liste les événements touristiques.
+    Filtres disponibles : ?region=<id>, ?type_event=<type>, ?a_venir=1
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.utils import timezone
+        evenements   = EvenementTouristique.objects.filter(est_actif=True)
+        region_id    = request.query_params.get('region')
+        type_event   = request.query_params.get('type_event')
+        a_venir      = request.query_params.get('a_venir')
+
+        if region_id:
+            evenements = evenements.filter(region__id=region_id)
+        if type_event:
+            evenements = evenements.filter(type_event=type_event)
+        if a_venir:
+            evenements = evenements.filter(date_fin__gte=timezone.now())
+
+        serialiseur = SerialiseurEvenement(evenements, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+
+class VueDetailEvenement(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        evenement   = get_object_or_404(EvenementTouristique, pk=pk)
+        serialiseur = SerialiseurEvenement(evenement, context={'request': request})
+        return Response(serialiseur.data)
+
+
+class VueEvenementsSite(APIView):
+    """Liste tous les événements liés à un site touristique donné."""
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        site        = get_object_or_404(SiteTouristique, pk=pk)
+        evenements  = EvenementTouristique.objects.filter(site=site, est_actif=True)
+        serialiseur = SerialiseurEvenement(evenements, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+
+# ═══════════════════════════════════════════════
+# SECTION 11 : CIRCUITS TOURISTIQUES
+# ═══════════════════════════════════════════════
+
+class VueListeCircuits(APIView):
+    """
+    Liste les circuits touristiques.
+    Filtres : ?niveau=facile|modere|difficile, ?duree=<nb_jours>, ?region=<id>
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        circuits = CircuitTouristique.objects.filter(est_actif=True).prefetch_related('etapes', 'regions')
+        niveau   = request.query_params.get('niveau')
+        duree    = request.query_params.get('duree')
+        region_id= request.query_params.get('region')
+
+        if niveau:
+            circuits = circuits.filter(niveau=niveau)
+        if duree:
+            circuits = circuits.filter(duree_jours=duree)
+        if region_id:
+            circuits = circuits.filter(regions__id=region_id)
+
+        serialiseur = SerialiseurCircuit(circuits, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+
+class VueDetailCircuit(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        circuit     = get_object_or_404(CircuitTouristique, pk=pk)
+        serialiseur = SerialiseurCircuit(circuit, context={'request': request})
+        return Response(serialiseur.data)
+
+
+# ═══════════════════════════════════════════════
+# SECTION 12 : GUIDES TOURISTIQUES
+# ═══════════════════════════════════════════════
+
+class VueListeGuides(APIView):
+    """
+    Liste les guides touristiques.
+    Filtres : ?region=<id>, ?langue=<mot>, ?certifie=1, ?disponible=1
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        guides      = GuideTouristique.objects.filter(est_actif=True).prefetch_related('regions_couvertes')
+        region_id   = request.query_params.get('region')
+        langue      = request.query_params.get('langue')
+        certifie    = request.query_params.get('certifie')
+        disponible  = request.query_params.get('disponible')
+
+        if region_id:
+            guides = guides.filter(regions_couvertes__id=region_id)
+        if langue:
+            guides = guides.filter(langues_parlees__icontains=langue)
+        if certifie:
+            guides = guides.filter(est_certifie=True)
+        if disponible:
+            guides = guides.filter(est_disponible=True)
+
+        serialiseur = SerialiseurGuide(guides, many=True, context={'request': request})
+        return Response(serialiseur.data)
+
+
+class VueDetailGuide(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        guide       = get_object_or_404(GuideTouristique, pk=pk)
+        serialiseur = SerialiseurGuide(guide, context={'request': request})
+        return Response(serialiseur.data)
+
+
+# ═══════════════════════════════════════════════
+# SECTION 13 : TRANSPORTS
+# ═══════════════════════════════════════════════
+
+class VueListeTransports(APIView):
+    """
+    Liste les moyens de transport disponibles.
+    Filtres : ?depart=<region_id>, ?arrivee=<region_id>, ?type=bus|taxi|bateau...
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        transports   = Transport.objects.filter(est_actif=True)
+        depart_id    = request.query_params.get('depart')
+        arrivee_id   = request.query_params.get('arrivee')
+        type_transp  = request.query_params.get('type')
+
+        if depart_id:
+            transports = transports.filter(region_depart__id=depart_id)
+        if arrivee_id:
+            transports = transports.filter(region_arrivee__id=arrivee_id)
+        if type_transp:
+            transports = transports.filter(type_transport=type_transp)
+
+        serialiseur = SerialiseurTransport(transports, many=True, context={'request': request})
+        return Response(serialiseur.data)

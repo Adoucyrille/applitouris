@@ -53,4 +53,30 @@ urlpatterns = [
     # ── Administration ────────────────────────────────────
     path('admin/utilisateurs/',    views.VueGestionUtilisateurs.as_view(), name='admin_utilisateurs'),
     path('admin/tableau-de-bord/', views.VueTableauBordAdmin.as_view(),    name='tableau_bord'),
+
+    # ── Hôtels / Hébergement ──────────────────────────────
+    path('hotels/',                              views.VueListeHotels.as_view(),            name='liste_hotels'),
+    path('hotels/mes-hotels/',                   views.VueMesHotels.as_view(),              name='mes_hotels'),
+    path('sites/<int:pk>/hotels-proximite/',     views.VueHotelsProximiteSite.as_view(),    name='hotels_proximite'),
+
+    # ── Restaurants / Gastronomie ─────────────────────────
+    path('restaurants/',                          views.VueListeRestaurants.as_view(),          name='liste_restaurants'),
+    path('restaurants/mes-restaurants/',          views.VueMesRestaurants.as_view(),            name='mes_restaurants'),
+    path('sites/<int:pk>/restaurants-proximite/', views.VueRestaurantsProximiteSite.as_view(),  name='restaurants_proximite'),
+
+    # ── Événements touristiques ───────────────────────────
+    path('evenements/',                   views.VueListeEvenements.as_view(),  name='liste_evenements'),
+    path('evenements/<int:pk>/',          views.VueDetailEvenement.as_view(),  name='detail_evenement'),
+    path('sites/<int:pk>/evenements/',    views.VueEvenementsSite.as_view(),   name='evenements_site'),
+
+    # ── Circuits touristiques ─────────────────────────────
+    path('circuits/',            views.VueListeCircuits.as_view(),  name='liste_circuits'),
+    path('circuits/<int:pk>/',   views.VueDetailCircuit.as_view(),  name='detail_circuit'),
+
+    # ── Guides touristiques ───────────────────────────────
+    path('guides/',              views.VueListeGuides.as_view(),    name='liste_guides'),
+    path('guides/<int:pk>/',     views.VueDetailGuide.as_view(),    name='detail_guide'),
+
+    # ── Transports ────────────────────────────────────────
+    path('transports/',          views.VueListeTransports.as_view(), name='liste_transports'),
 ]

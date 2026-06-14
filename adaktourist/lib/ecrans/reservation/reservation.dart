@@ -122,7 +122,7 @@ class _EcranReservationState extends State<EcranReservation> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${widget.site['prix_entree']} FCFA / personne',
+                      '${(double.tryParse(widget.site['prix_entree']?.toString() ?? '0') ?? 0).toStringAsFixed(0)} FCFA / personne',
                       style: const TextStyle(
                         color      : Color(0xFF009A44),
                         fontWeight : FontWeight.bold,

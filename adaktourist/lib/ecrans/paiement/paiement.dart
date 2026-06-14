@@ -35,18 +35,18 @@ class _EcranPaiementState extends State<EcranPaiement> {
   }
 
   final List<Map<String, String>> _moyens = [
-    {'id': 'orange_money', 'nom': 'Orange Money'},
+    {'id': 'orange_money', 'nom': 'Orange Money CI'},
     {'id': 'mtn_momo',     'nom': 'MTN MoMo'},
     {'id': 'wave',         'nom': 'Wave'},
-    {'id': 'moov_money',   'nom': 'Moov Money'},
+    {'id': 'moov_africa',  'nom': 'Moov Africa'},
   ];
 
   String _hintNumero() {
     switch (_moyenSelectionne) {
-      case 'orange_money': return 'Ex : 07 00 00 00 00';
-      case 'mtn_momo'    : return 'Ex : 05 00 00 00 00';
-      case 'moov_money'  : return 'Ex : 01 00 00 00 00';
-      case 'wave'        : return 'Ex : 07 00 00 00 00';
+      case 'orange_money': return 'Ex : 0700000000';
+      case 'mtn_momo'    : return 'Ex : 0500000000';
+      case 'moov_africa' : return 'Ex : 0100000000';
+      case 'wave'        : return 'Ex : 0700000000';
       default            : return 'Numéro de téléphone (10 chiffres)';
     }
   }
@@ -54,7 +54,7 @@ class _EcranPaiementState extends State<EcranPaiement> {
   static const Map<String, List<String>> _prefixesOperateur = {
     'orange_money': ['07', '08', '09'],
     'mtn_momo'    : ['04', '05', '06'],
-    'moov_money'  : ['01', '02', '03'],
+    'moov_africa' : ['01', '02', '03'],
     'wave'        : ['01', '02', '03', '04', '05', '06', '07', '08', '09'],
   };
 
@@ -70,7 +70,7 @@ class _EcranPaiementState extends State<EcranPaiement> {
       final noms = {
         'orange_money': 'Orange (07, 08, 09)',
         'mtn_momo'    : 'MTN (05, 06)',
-        'moov_money'  : 'Moov (01, 02)',
+        'moov_africa' : 'Moov Africa (01, 02, 03)',
         'wave'        : 'tous opérateurs',
       };
       final nomOperateur = noms[_moyenSelectionne] ?? '';
@@ -250,7 +250,7 @@ class _EcranPaiementState extends State<EcranPaiement> {
           ),
         );
 
-      case 'moov_money':
+      case 'moov_africa':
         return Container(
           width : 64, height: 42,
           decoration: BoxDecoration(
@@ -272,7 +272,7 @@ class _EcranPaiementState extends State<EcranPaiement> {
                 ),
               ),
               Text(
-                'Money',
+                'Africa',
                 style: TextStyle(
                   color    : Colors.white70,
                   fontSize : 8,

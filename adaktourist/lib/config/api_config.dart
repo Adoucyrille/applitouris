@@ -38,6 +38,14 @@ class ApiConfig {
   static const String initierPaiement = '$baseUrl/paiements/initier/';
   static const String simulerPaiement = '$baseUrl/paiements/simuler/';
 
+  // ── Hôtels ────────────────────────────────────────────
+
+  static const String hotels = '$baseUrl/hotels/';
+
+  // ── Restaurants ───────────────────────────────────────
+
+  static const String restaurants = '$baseUrl/restaurants/';
+
   // ── Administration ────────────────────────────────────
 
   static const String tableauBord = '$baseUrl/admin/tableau-de-bord/';
@@ -45,6 +53,23 @@ class ApiConfig {
       '$baseUrl/admin/utilisateurs/';
 
   // ── URLs dynamiques ───────────────────────────────────
+
+  static const String creerHotel       = '$baseUrl/hotels/';
+  static const String mesHotels        = '$baseUrl/hotels/mes-hotels/';
+  static const String creerRestaurant  = '$baseUrl/restaurants/';
+  static const String mesRestaurants   = '$baseUrl/restaurants/mes-restaurants/';
+
+  static String hotelsRegion(int regionId) =>
+      '$hotels?region=$regionId';
+
+  static String hotelsProximite(int siteId, {int rayon = 10}) =>
+      '$sites$siteId/hotels-proximite/?rayon=$rayon';
+
+  static String restaurantsRegion(int regionId) =>
+      '$restaurants?region=$regionId';
+
+  static String restaurantsProximite(int siteId, {int rayon = 10}) =>
+      '$sites$siteId/restaurants-proximite/?rayon=$rayon';
 
   static String detailSite(int id) =>
       '$sites$id/';
